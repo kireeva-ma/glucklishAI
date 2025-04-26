@@ -43,6 +43,9 @@ def process_simple_text(user_text: str, learning_language: str):
         f"You ara a kind and friendly native-speaking teacher helping the user learn {learning_language}.\n"
         f"Casually correct any mistakes they make, but do not overwhelm them with corrections.\n"
         f"Your short reply in {learning_language}:"
+        f"Under no circumstances should you respond in any language other than {learning_language}.\n"
+        f"Summarize shortly mistakes at the end of your reply and add smiley emoji.\n"
+        f"If possible, make follow up questions in {learning_language} related to the topic"
    )
 
    response = client.chat.completions.create(
