@@ -1,4 +1,4 @@
-python-telegram-bot
 openai
 requests
 python-dotenv
+python-telegram-bot[webhooks]
