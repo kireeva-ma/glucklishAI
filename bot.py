@@ -152,7 +152,7 @@ async def handle_language_selection(update: Update, context: ContextTypes.DEFAUL
         USER_LANGUAGES[user_id]["learning"] = selected_language_code
         USER_LANGUAGES[user_id]["stage"] = "choose_level"
 
-        language_levels = ["A1", "A2", "B1", "B2", "C1", "C2", "❓ "]
+        language_levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
         language_level_buttons = [[level for level in language_levels]]
         reply_markup = ReplyKeyboardMarkup(language_level_buttons, one_time_keyboard=True, resize_keyboard=True)
 
@@ -183,34 +183,34 @@ async def handle_language_level(update: Update, context: ContextTypes.DEFAULT_TY
 
         await update.message.reply_text(welcome_message)
         await continue_conversation(update, context)
-
-    elif selected_level == "❓":
-        await update.message.reply_text("Let's start a small test🚀")
-        await start_test(update, context)  # вызовем функцию теста
-
-
-
-async def start_test(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
-    user_state = USER_LANGUAGES.get(user_id)
-
-    if not user_state or not user_state.get("learning"):
-        await update.message.reply_text("Сначала выбери язык через /start.")
-        return
-
-    language = LANGUAGES.get(user_state["learning"], "English")
-    level = "A1"  # допустим, для начала тест будет простым, потом мы можем сделать адаптивный
-
-    test_content = process_test(language, level)
-    questions = parse_test_content(test_content)
-
-    for question in questions:
-        question_text = question["question"]
-        options = question["options"]
-
-        reply_markup = ReplyKeyboardMarkup([[option] for option in options], one_time_keyboard=True, resize_keyboard=True)
-
-        await update.message.reply_text(question_text, reply_markup=reply_markup)
+    #
+    # elif selected_level == "❓":
+    #     await update.message.reply_text("Let's start a small test🚀")
+    #     await start_test(update, context)  # вызовем функцию теста
+#
+#
+#
+# async def start_test(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     user_id = update.message.from_user.id
+#     user_state = USER_LANGUAGES.get(user_id)
+#
+#     if not user_state or not user_state.get("learning"):
+#         await update.message.reply_text("Сначала выбери язык через /start.")
+#         return
+#
+#     language = LANGUAGES.get(user_state["learning"], "English")
+#     level = "A1"  # допустим, для начала тест будет простым, потом мы можем сделать адаптивный
+#
+#     test_content = process_test(language, level)
+#     questions = parse_test_content(test_content)
+#
+#     for question in questions:
+#         question_text = question["question"]
+#         options = question["options"]
+#
+#         reply_markup = ReplyKeyboardMarkup([[option] for option in options], one_time_keyboard=True, resize_keyboard=True)
+#
+#         await update.message.reply_text(question_text, reply_markup=reply_markup)
 
 async def continue_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
