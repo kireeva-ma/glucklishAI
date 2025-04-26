@@ -89,10 +89,16 @@ def text_to_audio(replyFromAI: str, learning_language: str):
     return response.content
 
 
-def process_test(language_to_speak: str, language_level: str):
+def process_daily_challenge(learning_language: str):
     prompt = (
-        f"Generate a small multiple-choice test for {language_to_speak} language for the {language_level} level of language proficiency.\n"
-        f"Test must consist of 3 questions and have 4 possible answers.\n"
+        f"You are a kind and friendly native-speaking teacher helping the user learn {learning_language}.\n"
+        f"Generate a daily challenge for the user to practice their {learning_language} skills.\n"
+        f"The challenge should be engaging, fun, and suitable for a {learning_language} learner.\n"
+        f"Include a brief explanation of the challenge and its purpose.\n"
+        f"Your reply should be entirely in {learning_language}."
+        f"Challange must not be too big, it should be possible to do in 5-10 minutes.\n"
+        f"Make challanges so that you are able to provide answers after user answers the challenge.\n"
+        f"Again, please respond only in the {learning_language} language.\n"
     )
 
     response = client.chat.completions.create(
@@ -102,16 +108,7 @@ def process_test(language_to_speak: str, language_level: str):
     return response.choices[0].message.content
 
 
-def process_translate(user_text: str, language_of_user: str, target_language: str):
-    prompt = (
-        f"Translate in a friendly manner from {language_of_user} to {target_language} the following text: {user_text}\n"
-    )
 
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return response.choices[0].message.content
 
 
 

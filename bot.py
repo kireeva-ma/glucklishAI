@@ -3,7 +3,7 @@ from telegram import Update, ReplyKeyboardMarkup, BotCommand
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes, CommandHandler
 from dotenv import load_dotenv
 import os
-from aiBrain import generate_reply_from_start, process_simple_text, process_voice
+from aiBrain import generate_reply_from_start, process_simple_text, process_voice, process_daily_challenge
 import re
 import asyncio
 
@@ -94,6 +94,22 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_language = USER_LANGUAGES.get(user_id, {}).get("native", "en")
     help_message = translations["help"].get(user_language, translations["help"]["en"])
     await update.message.reply_text(help_message)
+
+
+async def daily_challenge(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    user_state = USER_LANGUAGES.get(user_id)
+
+    if not user_state or not user_state.get("learning"):
+        await update.message.reply_text("Please select a language first with /start.")
+        return
+
+    learning_language_code = user_state["learning"]
+    learning_language = LANGUAGES.get(learning_language_code, "English")
+
+    challenge_text = process_daily_challenge(learning_language)
+
+    await update.message.reply_text(challenge_text)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
@@ -196,7 +212,8 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def set_commands(app):
     await app.bot.set_my_commands([
         BotCommand("start", "Start a new conversation"),
-        BotCommand("help", "How to use your personal language tutor 🤖")
+        BotCommand("help", "How to use your personal language tutor 🤖"),
+        BotCommand("Daily Challenge", "Have some fun with your language learning!")
     ])
 
 async def main():
@@ -206,6 +223,7 @@ async def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("Daily Challenge", daily_challenge))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
 
