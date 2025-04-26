@@ -52,6 +52,23 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.error(f"Error handling voice: {e}")
         await update.message.reply_text("😵‍💫 Oops! Something went wrong. Please try again!")
 
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message = update.message.text
+    if message.lower() == "hi" or message.lower() == "hello":
+        await update.message.reply_text("👋 Hallo! Wie kann ich dir helfen?")
+    else:
+        await update.message.reply_text("🧑‍💻 Ich bin dein Sprachassistent. Sende mir eine Sprachnachricht, um zu üben!")
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    help_text = (
+        "📚 *How to use the bot:*\n\n"
+        "/start - Start the conversation.\n"
+        "Send a voice message for transcription and correction.\n"
+        "If you need help, type /help."
+    )
+    await update.message.reply_text(help_text, parse_mode="Markdown")
+
+
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         thinking_message = await update.message.reply_text("🤔 Einen Moment...")
@@ -85,5 +102,7 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("start", start))  # <-- Correct
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))  # <-- Correct
     app.add_handler(MessageHandler(filters.TEXT, handle_text))
+    app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(MessageHandler(filters.TEXT, handle_message))  # Handle all regular messages
 
     app.run_polling()
