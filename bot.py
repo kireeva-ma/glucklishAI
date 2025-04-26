@@ -257,4 +257,9 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("test", test_command))
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
 
-    app.run_polling()
+app.run_webhook(
+    listen="0.0.0.0",
+    port=int(os.environ.get('PORT', 8443)),
+    webhook_url=f"https://{RENDER_EXTERNAL_HOSTNAME}/"
+)
+
