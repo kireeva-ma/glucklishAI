@@ -107,7 +107,17 @@ def process_daily_challenge(learning_language: str):
     )
     return response.choices[0].message.content
 
+def process_feedback(learning_language: str):
+    prompt = (
+        f"Create a following text in {learning_language} language:\n"
+        f"🏆Great job! Here is your feedback on the challenge you just completed:\n"
+    )
 
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response.choices[0].message.content
 
 
 

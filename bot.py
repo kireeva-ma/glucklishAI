@@ -3,7 +3,8 @@ from telegram import Update, ReplyKeyboardMarkup, BotCommand
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes, CommandHandler
 from dotenv import load_dotenv
 import os
-from aiBrain import generate_reply_from_start, process_simple_text, process_voice, process_daily_challenge
+from aiBrain import generate_reply_from_start, process_simple_text, process_voice, process_daily_challenge, \
+    process_feedback
 import re
 import asyncio
 
@@ -117,11 +118,12 @@ async def daily_challenge(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_daily_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    learning_language = USER_LANGUAGES[user_id]["learning"]
+    learning_language_code = USER_LANGUAGES[update.message.from_user.id]["learning"]
+    learning_language = LANGUAGES[learning_language_code]
 
     gpt_reply = process_simple_text(update.message.text, learning_language)
 
-    await update.message.reply_text(f"🏆 Here's feedback on your daily challenge answer:")
+    await update.message.reply_text(process_feedback(learning_language))
     await update.message.reply_text(gpt_reply)
 
     # Switch back to normal conversation
