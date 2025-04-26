@@ -263,17 +263,21 @@ async def set_commands(app):
     if __name__ == '__main__':
         app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("daily", daily_challenge))
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
-    app.add_handler(MessageHandler(filters.VOICE, handle_voice))
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(CommandHandler("help", help_command))
+        app.add_handler(CommandHandler("daily", daily_challenge))
+        app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+        app.add_handler(MessageHandler(filters.VOICE, handle_voice))
 
+        # Берем порт из переменных окружения (Render сам его выставляет)
+        port = int(os.environ.get('PORT', 8443))
+        webhook_url = f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/"
 
-    app.run_webhook(
-    listen="0.0.0.0",
-    port=int(os.environ.get('PORT', 8443)),
-    webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/"
+        print(f"Starting webhook on port {port} with URL {webhook_url}")
 
-)
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=port,
+            webhook_url=webhook_url,
+        )
 
