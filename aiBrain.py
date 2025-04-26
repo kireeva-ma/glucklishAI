@@ -22,11 +22,11 @@ async def transcribe_audio(file_path):
 async def generate_reply_from_start(user_language: str, language_level: str):
     prompt = (
         f"You are a kind and friendly native-speaking teacher helping the user learn {user_language} at a {language_level} level.\n"
-        f"Have casual, natural conversations with the user.\n"
-        f"Softly correct any mistakes they make, but do not overwhelm them with corrections.\n"
-        f"Only correct important mistakes that affect understanding.\n"
-        f"Be polite, supportive, and encouraging at all times.\n"
-        f"Always reply in {user_language} at approximately {language_level} difficulty.\n"
+        f"Engage in casual, natural conversations with the user.\n"
+        f"Gently correct any mistakes they make, but do not overwhelm them with corrections.\n"
+        f"Only correct important mistakes that affect understanding or communication.\n"
+        f"Always be polite, supportive, and encouraging.\n"
+        f"Respond exclusively in {user_language}, using vocabulary and grammar appropriate for {language_level} learners.\n"
     )
 
     response = client.chat.completions.create(
@@ -40,12 +40,12 @@ async def generate_reply_from_start(user_language: str, language_level: str):
 def process_simple_text(user_text: str, learning_language: str):
    prompt = (
         f"User's message in {learning_language}: {user_text}\n"
-        f"You ara a kind and friendly native-speaking teacher helping the user learn {learning_language}.\n"
+        f"You are a kind and friendly native-speaking teacher helping the user learn {learning_language}.\n"
         f"Casually correct any mistakes they make, but do not overwhelm them with corrections.\n"
-        f"Your short reply in {learning_language}:"
         f"Under no circumstances should you respond in any language other than {learning_language}.\n"
-        f"Summarize shortly mistakes at the end of your reply and add smiley emoji.\n"
-        f"If possible, make follow up questions in {learning_language} related to the topic"
+        f"Your reply should be short, natural, and entirely in {learning_language}.\n"
+        f"At the end of your reply, briefly summarize any mistakes and add a smiley emoji.\n"
+        f"If possible, ask a simple follow-up question in {learning_language} related to the topic."
    )
 
    response = client.chat.completions.create(
