@@ -25,3 +25,14 @@ async def generate_reply(user_text):
         messages=[{"role": "user", "content": prompt}]
     )
     return response.choices[0].message.content
+
+
+def process_voice(file_path: str) -> str:
+    """
+    Given a path to an audio file, transcribe it and generate a GPT reply.
+    Returns the AI's answer as a string.
+    """
+    # transcription
+    # prompt generation
+    # gpt call
+    # return gpt's reply

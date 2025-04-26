@@ -8,7 +8,7 @@ import os
 from telegram.ext import CommandHandler
 
 from aiBrain import client
-from aiBrain import process_voice
+# from aiBrain import process_voice
 
 
 # Load environment variables
@@ -41,6 +41,8 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logging.error(f"Error handling voice: {e}")
         await update.message.reply_text("😵‍💫 Oops! Something went wrong. Please try again!")
+
+
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message.text
