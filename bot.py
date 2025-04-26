@@ -260,6 +260,7 @@ if __name__ == '__main__':
 app.run_webhook(
     listen="0.0.0.0",
     port=int(os.environ.get('PORT', 8443)),
-    webhook_url=f"https://{RENDER_EXTERNAL_HOSTNAME}/"
+    webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/"
+
 )
 
