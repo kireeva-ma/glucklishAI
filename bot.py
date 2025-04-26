@@ -1,10 +1,11 @@
 import logging
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes, CommandHandler
 from dotenv import load_dotenv
 import os
 from aiBrain import generate_reply_from_start, process_simple_text, process_voice
 import re
+import sys
 # Load environment variables
 load_dotenv()
 
