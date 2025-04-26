@@ -3,8 +3,8 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes, CommandHandler
 from dotenv import load_dotenv
 import os
-from aiBrain import generate_reply_from_start, process_simple_text
-
+from aiBrain import generate_reply_from_start, process_simple_text, process_test
+import re
 # Load environment variables
 load_dotenv()
 
@@ -59,6 +59,57 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
+async def test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    user_state = USER_LANGUAGES.get(user_id)
+
+    if not user_state or not user_state.get("learning") or not user_state.get("language_level"):
+        await update.message.reply_text("Please select a language and level first with /start.")
+        return
+
+    language = LANGUAGES.get(user_state["learning"], "English")
+    level = user_state["language_level"]
+
+    test_content = process_test(language, level)
+
+    questions = parse_test_content(test_content)
+
+    for question in questions:
+        question_text = question["question"]
+        options = question["options"]
+
+        reply_markup = ReplyKeyboardMarkup([[option] for option in options], one_time_keyboard=True, resize_keyboard=True)
+
+        await update.message.reply_text(question_text, reply_markup=reply_markup)
+import re
+
+def parse_test_content(content: str):
+    questions = []
+    question_blocks = re.split(r"\n\d+\.", content)  # Делим по "1.", "2." и т.д.
+
+    for block in question_blocks:
+        block = block.strip()
+        if not block:
+            continue
+
+        lines = block.split('\n')
+        question = lines[0]
+        options = []
+
+        for line in lines[1:]:
+            match = re.match(r"[A-D]\)\s*(.*)", line.strip())
+            if match:
+                options.append(match.group(1))
+
+        if question and options:
+            questions.append({
+                "question": question,
+                "options": options
+            })
+
+    return questions
+
+
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     user_language = USER_LANGUAGES.get(user_id, {}).get("native", "en")
@@ -101,7 +152,10 @@ async def handle_language_selection(update: Update, context: ContextTypes.DEFAUL
         USER_LANGUAGES[user_id]["learning"] = selected_language_code
         USER_LANGUAGES[user_id]["stage"] = "choose_level"
 
-        language_levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
+        language_levels = ["A1", "A2", "B1", "B2", "C1", "C2", "❓ "]
+        language_level_buttons = [[level for level in language_levels]]
+        reply_markup = ReplyKeyboardMarkup(language_level_buttons, one_time_keyboard=True, resize_keyboard=True)
+
         language_level_buttons = [[level for level in language_levels]]
         reply_markup = ReplyKeyboardMarkup(language_level_buttons, one_time_keyboard=True)
 
@@ -116,27 +170,47 @@ async def handle_language_selection(update: Update, context: ContextTypes.DEFAUL
 
 async def handle_language_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    selected_level = update.message.text.upper()
+    selected_level = update.message.text.strip()
 
-    valid_levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
-
-    if selected_level in valid_levels:
-        USER_LANGUAGES[user_id]["language_level"] = selected_level
+    if selected_level.upper() in ["A1", "A2", "B1", "B2", "C1", "C2"]:
+        USER_LANGUAGES[user_id]["language_level"] = selected_level.upper()
         USER_LANGUAGES[user_id]["stage"] = "conversation"
 
         learning_language = LANGUAGES[USER_LANGUAGES[user_id]['learning']]
         language_level = USER_LANGUAGES[user_id]['language_level']
 
-        # ⮕ New: generate GPT welcome message
         welcome_message = await generate_reply_from_start(learning_language, language_level)
 
         await update.message.reply_text(welcome_message)
-
-        # ⮕ Then continue conversation
         await continue_conversation(update, context)
 
-    else:
-        await update.message.reply_text("Please choose a valid level (A1, A2, B1, B2, C1, C2).")
+    elif selected_level == "❓":
+        await update.message.reply_text("Let's start a small test🚀")
+        await start_test(update, context)  # вызовем функцию теста
+
+
+
+async def start_test(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    user_state = USER_LANGUAGES.get(user_id)
+
+    if not user_state or not user_state.get("learning"):
+        await update.message.reply_text("Сначала выбери язык через /start.")
+        return
+
+    language = LANGUAGES.get(user_state["learning"], "English")
+    level = "A1"  # допустим, для начала тест будет простым, потом мы можем сделать адаптивный
+
+    test_content = process_test(language, level)
+    questions = parse_test_content(test_content)
+
+    for question in questions:
+        question_text = question["question"]
+        options = question["options"]
+
+        reply_markup = ReplyKeyboardMarkup([[option] for option in options], one_time_keyboard=True, resize_keyboard=True)
+
+        await update.message.reply_text(question_text, reply_markup=reply_markup)
 
 async def continue_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
@@ -153,5 +227,6 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_handler(CommandHandler("test", test_command))
 
     app.run_polling()
