@@ -41,120 +41,112 @@ translations = {
     }
 }
 
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     user_language_code = update.message.from_user.language_code
 
-    # Преобразуем код языка Telegram в стандартный формат
     user_language = LANGUAGES.get(user_language_code, 'en')
 
-    # Сохраняем язык пользователя
-    USER_LANGUAGES[user_id] = {"native": user_language, "learning": None}
+    USER_LANGUAGES[user_id] = {"native": user_language, "learning": None, "language_level": None, "stage": "choose_language"}
 
-    # Получаем переведенное сообщение для приветствия
     start_message = translations["start"].get(user_language, translations["start"]["en"])
 
     language_buttons = [[language for language in LANGUAGES.values()]]
     reply_markup = ReplyKeyboardMarkup(language_buttons, one_time_keyboard=True)
 
-    # Отправляем сообщение на языке пользователя
     await update.message.reply_text(
         start_message.format(LANGUAGES.get(user_language, 'your native language')),
         reply_markup=reply_markup
     )
 
-
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     user_language = USER_LANGUAGES.get(user_id, {}).get("native", "en")
 
-    # Get the translated help message for the user's language
     help_message = translations["help"].get(user_language, translations["help"]["en"])
 
     await update.message.reply_text(help_message)
 
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    user_state = USER_LANGUAGES.get(user_id)
+
+    if not user_state:
+        await update.message.reply_text("Please start first with /start.")
+        return
+
+    stage = user_state.get("stage")
+    text = update.message.text.strip()
+
+    if stage == "choose_language":
+        await handle_language_selection(update, context)
+    elif stage == "choose_level":
+        await handle_language_level(update, context)
+    elif stage == "conversation":
+        await continue_conversation(update, context)
+    else:
+        await update.message.reply_text("I'm not sure what to do. Please type /start.")
 
 async def handle_language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     selected_language = update.message.text.lower()
 
-    # В LANGUAGES мы используем коды языков, поэтому проверяем их по коду, а не по названию
     selected_language_code = None
     for code, name in LANGUAGES.items():
         if name.lower() == selected_language:
             selected_language_code = code
             break
 
-    # Проверяем, что выбранный язык допустим
     if selected_language_code:
-        # Сохраняем выбранный язык для пользователя
         USER_LANGUAGES[user_id]["learning"] = selected_language_code
+        USER_LANGUAGES[user_id]["stage"] = "choose_level"
 
-        # Просим выбрать уровень языка
-        valid_levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
-        language_level_buttons = [
-            [level] for level in valid_levels  # Генерируем кнопки для уровней
-        ]
+        language_levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
+        language_level_buttons = [[level for level in language_levels]]
         reply_markup = ReplyKeyboardMarkup(language_level_buttons, one_time_keyboard=True)
 
         await update.message.reply_text(
-            f"Great choice! You've selected {LANGUAGES[selected_language_code]}. "
-            "Now, please tell me your language level (e.g., A1, B2, etc.).",
+            f"Great choice! You've selected {LANGUAGES[selected_language_code]}. Now, please tell me your language level (e.g., A1, B2, etc.).",
             reply_markup=reply_markup
         )
     else:
         await update.message.reply_text(
             "Sorry, I don't support that language. Please choose a valid language from the list."
         )
-# Функция для обработки выбора уровня языка
+
 async def handle_language_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    selected_level = update.message.text.upper()  # Получаем текст уровня, который ввел пользователь
-
-    if not selected_level:  # Проверяем, если уровень не выбран
-        await update.message.reply_text(
-            "Please select a language level from the available options (A1, A2, B1, B2, C1, C2)."
-        )
-        return
+    selected_level = update.message.text.upper()
 
     valid_levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
 
     if selected_level in valid_levels:
-        # Сохраняем уровень языка
         USER_LANGUAGES[user_id]["language_level"] = selected_level
+        USER_LANGUAGES[user_id]["stage"] = "conversation"
 
         await update.message.reply_text(
-            f"Got it! Your level in {LANGUAGES[USER_LANGUAGES[user_id]['learning']]} is set to {selected_level}. "
-            "We can now start the conversation in your learning language. Feel free to ask anything!"
+
+            f"Got it! Your level in {LANGUAGES[USER_LANGUAGES[user_id]['learning']]} is set to {selected_level}. We can now start the conversation!"
         )
 
-        # Начинаем разговор
-        await generate_conversation(update, context)
+        await continue_conversation(update, context)
     else:
-        await update.message.reply_text(
-            "Please choose a valid level (A1, A2, B1, B2, C1, C2)."
-        )
+        await update.message.reply_text("Please choose a valid level (A1, A2, B1, B2, C1, C2).")
 
-async def generate_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def continue_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    user_language = USER_LANGUAGES[user_id]["learning"]
+    learning_language = USER_LANGUAGES[user_id]["learning"]
     language_level = USER_LANGUAGES[user_id]["language_level"]
 
-    # Call the function from aiBrains to generate the first message based on the selected language and level
-    gpt_reply = await generate_reply_from_start(user_language, language_level)
+    gpt_reply = await generate_reply_from_start(update.message.text, LANGUAGES[learning_language], language_level)
 
-    # Send the generated reply to the user
     await update.message.reply_text(gpt_reply)
 
-
-# --- App ---
 if __name__ == '__main__':
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
-    app.add_handler(CommandHandler("start", start))  # Start command
-    app.add_handler(CommandHandler("help", help_command))  # Help command
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_language_selection))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_language_level))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     app.run_polling()

@@ -16,39 +16,64 @@ async def transcribe_audio(file_path):
         )
     return transcription.text
 
-async def generate_reply_from_start(user_text, language_to_speak: str, language_level: str):
+
+async def generate_reply_from_start(user_language: str, language_level: str):
     prompt = (
-        f"You are a friendly native speaker helping the user learn {language_to_speak} with {language_level} level of language proficiency.\n"
+        f"You are a friendly native speaker helping the user learn {user_language} with {language_level} level of language proficiency.\n"
         f"Speak casually, correct mistakes softly if necessary.\n\n"
         f"Be polite and friendly.\n"
     )
 
     response = client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-4o",
         messages=[{"role": "user", "content": prompt}]
     )
     return response.choices[0].message.content
 
 
 
-def process_text(user_text: str):
+def process_simple_text(user_text: str):
    prompt = (
         f"User's message: {user_text}\n"
         f"Your reply:"
    )
 
    response = client.chat.completions.create(
-       model="gpt-4",
+       model="gpt-4o",
        messages=[{"role": "user", "content": prompt}]
    )
    return response.choices[0].message.content
 
-
-
 def process_voice(file_path: str) -> str:
     transcription = transcribe_audio(file_path)
-    replyFromAI = process_text(transcription)
+    replyFromAI = process_simple_text(transcription)
 
     return replyFromAI
 
+def process_test(language_to_speak: str, language_level: str):
+    prompt = (
+        f"Generate a small multiple-choice test for {language_to_speak} language for the {language_level} level of language proficiency.\n"
+        f"Test must consist of 3 questions and have 4 possible answers.\n"
+    )
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response.choices[0].message.content
+
+
+def process_translate(user_text: str, language_of_user: str, target_language: str):
+    prompt = (
+        f"Translate in a friendly manner from {language_of_user} to {target_language} the following: {user_text}\n"
+    )
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response.choices[0].message.content
+
+
+print(process_test("German", "A1"))
 
