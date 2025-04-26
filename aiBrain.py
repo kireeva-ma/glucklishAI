@@ -45,10 +45,16 @@ def process_simple_text(user_text: str, learning_language: str):
    )
    return response.choices[0].message.content
 
+
 async def process_voice(file_path: str, learning_language: str, toSpeech: bool):
     transcription = await transcribe_audio(file_path)
     replyFromAI = process_simple_text(transcription, learning_language)
-    return text_to_audio(replyFromAI, learning_language) if toSpeech else replyFromAI
+
+    if toSpeech:
+        audio_bytes = text_to_audio(replyFromAI, learning_language)
+        return audio_bytes
+    else:
+        return replyFromAI
 
 def text_to_audio(replyFromAI: str, learning_language: str):
     voices = {
@@ -94,7 +100,6 @@ def process_translate(user_text: str, language_of_user: str, target_language: st
         messages=[{"role": "user", "content": prompt}]
     )
     return response.choices[0].message.content
-
 
 
 

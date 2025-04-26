@@ -222,7 +222,9 @@ async def continue_conversation(update: Update, context: ContextTypes.DEFAULT_TY
     await update.message.reply_text(gpt_reply)
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    learning_language = USER_LANGUAGES[update.message.from_user.id]["learning"]
+    learning_language_code = USER_LANGUAGES[update.message.from_user.id]["learning"]
+    learning_language = USER_LANGUAGES.get(learning_language_code)
+
     try:
         voice = update.message.voice
 
@@ -235,10 +237,17 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await new_file.download_to_drive(local_file_path)
 
         # Обрабатываем голос
-        response_text = await process_voice(local_file_path, learning_language, toSpeech=False)
+        response_text = await process_voice(local_file_path, learning_language, toSpeech=True)
 
+        if isinstance(response_text, bytes):
+            from io import BytesIO
+            audio_io = BytesIO(response_text)
+            audio_io.name = "reply.mp3"  # Telegram needs filename
+            await update.message.reply_audio(audio_io)
+        else:
+            await update.message.reply_text(response_text)
         # Отправляем ответ
-        await update.message.reply_text(response_text)
+        #await update.message.reply_text(response_text)
 
         # Чистим файл
         os.remove(local_file_path)
