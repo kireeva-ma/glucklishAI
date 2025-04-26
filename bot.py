@@ -3,9 +3,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes, CommandHandler
 from dotenv import load_dotenv
 import os
-import openai
-from aiBrain import client
-from aiBrain import process_voice
+from aiBrain import generate_reply_from_start
 
 # Load environment variables
 load_dotenv()
@@ -15,9 +13,6 @@ logging.basicConfig(level=logging.INFO)
 
 # Your API keys from environment variables
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-openai.api_key = OPENAI_API_KEY
 
 USER_LANGUAGES = {}
 LANGUAGES = {
@@ -28,44 +23,58 @@ LANGUAGES = {
     "ru": "Russian"
 }
 
-# Translations for user messages v
+# Translations for /start and /help
 translations = {
     "start": {
-        "en": "🎉 Welcome! You are speaking in {native}. Which language would you like to learn?",
-        "de": "🎉 Willkommen! Du sprichst {native}. Welche Sprache möchtest du lernen?",
-        "fr": "🎉 Bienvenue ! Vous parlez {native}. Quelle langue souhaitez-vous apprendre ?",
-        "es": "🎉 ¡Bienvenido! Hablas {native}. ¿Qué idioma te gustaría aprender?",
-        "ru": "🎉 Добро пожаловать! Вы говорите на {native}. Какой язык вы хотите учить?"
+        "en": "🎉 Welcome! You are speaking in {0}. Which language would you like to learn?",
+        "de": "🎉 Willkommen! Du sprichst {0}. Welche Sprache möchtest du lernen?",
+        "fr": "🎉 Bienvenue! Vous parlez {0}. Quelle langue souhaitez-vous apprendre?",
+        "es": "🎉 ¡Bienvenido! Estás hablando en {0}. ¿Qué idioma te gustaría aprender?",
+        "ru": "🎉 Добро пожаловать! Вы говорите на {0}. Какой язык вы хотите учить?"
     },
     "help": {
-        "en": "📝 *Help*:\n\nWelcome to the language learning bot! Here’s what you can do:\n\n/start - Start the language learning process.\n/help - Display this help message.",
-        "de": "📝 *Hilfe*:\n\nWillkommen beim Sprachlern-Bot! Hier ist, was du tun kannst:\n\n/start - Starte den Sprachlernprozess.\n/help - Zeige diese Hilfemeldung an.",
-        "fr": "📝 *Aide*:\n\nBienvenue dans le bot d'apprentissage des langues ! Voici ce que vous pouvez faire:\n\n/start - Démarrez le processus d'apprentissage des langues.\n/help - Affichez ce message d'aide.",
-        "es": "📝 *Ayuda*:\n\n¡Bienvenido al bot de aprendizaje de idiomas! Aquí está lo que puedes hacer:\n\n/start - Iniciar el proceso de aprendizaje de idiomas.\n/help - Mostrar este mensaje de ayuda.",
-        "ru": "📝 *Помощь*:\n\nДобро пожаловать в бот для изучения языков! Вот что вы можете сделать:\n\n/start - Начать процесс обучения языку.\n/help - Показать это сообщение помощи."
+        "en": "📝 Help: /start to start. /help to get help.",
+        "de": "📝 Hilfe: /start um zu starten. /help für Hilfe.",
+        "fr": "📝 Aide: /start pour commencer. /help pour obtenir de l'aide.",
+        "es": "📝 Ayuda: /start para comenzar. /help para obtener ayuda.",
+        "ru": "📝 Помощь: /start для начала. /help для получения помощи."
     }
 }
 
-# Start command
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    user_language = update.message.from_user.language_code
+    user_language_code = update.message.from_user.language_code
 
-    # Save the user's native language for future reference
+    # Преобразуем код языка Telegram в стандартный формат
+    user_language = LANGUAGES.get(user_language_code, 'en')
+
+    # Сохраняем язык пользователя
     USER_LANGUAGES[user_id] = {"native": user_language, "learning": None}
 
-    # Ask user what language they want to learn
-    language_buttons = [
-        [language for language in LANGUAGES.values()]
-    ]
+    # Получаем переведенное сообщение для приветствия
+    start_message = translations["start"].get(user_language, translations["start"]["en"])
+
+    language_buttons = [[language for language in LANGUAGES.values()]]
     reply_markup = ReplyKeyboardMarkup(language_buttons, one_time_keyboard=True)
 
+    # Отправляем сообщение на языке пользователя
     await update.message.reply_text(
-        translations["start"].get(user_language, translations["start"]["en"]).format(native=LANGUAGES.get(user_language, 'your native language')),
+        start_message.format(LANGUAGES.get(user_language, 'your native language')),
         reply_markup=reply_markup
     )
 
-# Handle language selection
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    user_language = USER_LANGUAGES.get(user_id, {}).get("native", "en")
+
+    # Get the translated help message for the user's language
+    help_message = translations["help"].get(user_language, translations["help"]["en"])
+
+    await update.message.reply_text(help_message)
+
+
 async def handle_language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     selected_language = update.message.text.lower()
@@ -81,22 +90,59 @@ async def handle_language_selection(update: Update, context: ContextTypes.DEFAUL
     if selected_language_code:
         # Store the learning language for the user
         USER_LANGUAGES[user_id]["learning"] = selected_language_code
+
+        # Ask user to provide their language level
+        language_levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
+        language_level_buttons = [
+            [level for level in language_levels]
+        ]
+        reply_markup = ReplyKeyboardMarkup(language_level_buttons, one_time_keyboard=True)
+
         await update.message.reply_text(
-            f"Great choice! I'll now communicate with you in {LANGUAGES[selected_language_code]}."
+            f"Great choice! You've selected {LANGUAGES[selected_language_code]}. "
+            "Now, please tell me your language level (e.g., A1, B2, etc.).",
+            reply_markup=reply_markup
         )
     else:
         await update.message.reply_text(
             "Sorry, I don't support that language. Please choose a valid language from the list."
         )
 
-# Help command
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+async def handle_language_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    user_language = USER_LANGUAGES.get(user_id, {}).get("native", "en")
+    selected_level = update.message.text.upper()
 
-    help_text = translations["help"].get(user_language, translations["help"]["en"])
+    valid_levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
 
-    await update.message.reply_text(help_text)
+    if selected_level in valid_levels:
+        # Store the language level
+        USER_LANGUAGES[user_id]["language_level"] = selected_level
+
+        await update.message.reply_text(
+            f"Got it! Your level in {LANGUAGES[USER_LANGUAGES[user_id]['learning']]} is set to {selected_level}. "
+            "We can now start the conversation in your learning language. Feel free to ask anything!"
+        )
+
+        # Start conversation by calling the AI function
+        await generate_conversation(update, context)
+    else:
+        await update.message.reply_text(
+            "Please choose a valid level (A1, A2, B1, B2, C1, C2)."
+        )
+
+
+async def generate_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    user_language = USER_LANGUAGES[user_id]["learning"]
+    language_level = USER_LANGUAGES[user_id]["language_level"]
+
+    # Call the function from aiBrains to generate the first message based on the selected language and level
+    gpt_reply = await generate_reply_from_start(user_language, language_level)
+
+    # Send the generated reply to the user
+    await update.message.reply_text(gpt_reply)
+
 
 # --- App ---
 if __name__ == '__main__':
@@ -104,6 +150,8 @@ if __name__ == '__main__':
 
     app.add_handler(CommandHandler("start", start))  # Start command
     app.add_handler(CommandHandler("help", help_command))  # Help command
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_language_selection))  # Handle language selection
+    app.add_handler(
+        MessageHandler(filters.TEXT & ~filters.COMMAND, handle_language_selection))  # Handle language selection
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_language_level))  # Handle language level
 
     app.run_polling()
