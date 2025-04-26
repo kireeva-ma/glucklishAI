@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 import os
 
 from telegram.ext import CommandHandler
+
+from aiBrain import client
+
 # Load environment variables
 load_dotenv()
 
@@ -29,9 +32,14 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file = await context.bot.get_file(voice.file_id)
         file_path = await file.download_to_drive()
 
-        audio_file = open(file_path, "rb")
-        transcription = openai.Audio.transcribe("whisper-1", audio_file)
-        user_text = transcription["text"]
+        with open(file_path, "rb") as audio_file:
+            transcription = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file
+            )
+
+        user_text = transcription.text
+        print(user_text)
 
         prompt = (
             "You are a native German-speaking barista. "
@@ -40,11 +48,12 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"User: {user_text}\nYou:"
         )
 
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=[{"role": "user", "content": prompt}]
         )
-        ai_reply = response['choices'][0]['message']['content']
+
+        ai_reply = response.choices[0].message.content
 
         await thinking_message.edit_text(ai_reply)
 

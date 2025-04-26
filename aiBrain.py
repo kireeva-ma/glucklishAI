@@ -1,17 +1,27 @@
 import openai
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
 
 load_dotenv()
 
 api_key = os.getenv("OPENAI_API_KEY")
-
 client = openai.OpenAI(api_key=api_key)
 
-with open("file_3.oga", "rb") as audio_file:
-    transcription = client.audio.transcriptions.create(
-        model="whisper-1",
-        file=audio_file
-    )
+async def transcribe_audio(file_path):
+    with open(file_path, "rb") as audio_file:
+        transcription = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file
+        )
+    return transcription.text
 
-print(transcription.text)
+async def generate_reply(user_text):
+    prompt = (
+        "You are a friendly German barista. Correct mistakes softly if needed.\n"
+        f"User: {user_text}\nYou:"
+    )
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response.choices[0].message.content
