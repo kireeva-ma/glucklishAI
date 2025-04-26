@@ -217,11 +217,12 @@ async def continue_conversation(update: Update, context: ContextTypes.DEFAULT_TY
     learning_language = USER_LANGUAGES[user_id]["learning"]
     language_level = USER_LANGUAGES[user_id]["language_level"]
 
-    gpt_reply = process_simple_text(update.message.text,)
+    gpt_reply = process_simple_text(update.message.text, learning_language)
 
     await update.message.reply_text(gpt_reply)
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    learning_language = USER_LANGUAGES[update.message.from_user.id]["learning"]
     try:
         voice = update.message.voice
 
@@ -234,7 +235,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await new_file.download_to_drive(local_file_path)
 
         # Обрабатываем голос
-        response_text = await process_voice(local_file_path)
+        response_text = await process_voice(local_file_path, learning_language, toSpeech=False)
 
         # Отправляем ответ
         await update.message.reply_text(response_text)
