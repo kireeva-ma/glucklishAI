@@ -3,7 +3,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes, CommandHandler
 from dotenv import load_dotenv
 import os
-from aiBrain import generate_reply_from_start, process_simple_text, process_test
+from aiBrain import generate_reply_from_start, process_simple_text, process_voice
 import re
 # Load environment variables
 load_dotenv()
@@ -221,6 +221,32 @@ async def continue_conversation(update: Update, context: ContextTypes.DEFAULT_TY
 
     await update.message.reply_text(gpt_reply)
 
+async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        voice = update.message.voice
+
+        # Получаем файл
+        new_file = await context.bot.get_file(voice.file_id)
+
+        # Сохраняем локально
+        local_file_path = f"temp_voice/{voice.file_unique_id}.ogg"
+        os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
+        await new_file.download_to_drive(local_file_path)
+
+        # Обрабатываем голос
+        response_text = await process_voice(local_file_path)
+
+        # Отправляем ответ
+        await update.message.reply_text(response_text)
+
+        # Чистим файл
+        os.remove(local_file_path)
+
+    except Exception as e:
+        logging.exception("An error occurred while processing a voice message")
+        await update.message.reply_text("Sorry, an error occurred while processing your voice message.")
+
+
 if __name__ == '__main__':
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
@@ -228,5 +254,6 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_handler(CommandHandler("test", test_command))
+    app.add_handler(MessageHandler(filters.VOICE, handle_voice))
 
     app.run_polling()

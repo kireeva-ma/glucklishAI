@@ -45,11 +45,11 @@ def process_simple_text(user_text: str):
    )
    return response.choices[0].message.content
 
-def process_voice(file_path: str) -> str:
-    transcription = transcribe_audio(file_path)
+async def process_voice(file_path: str) -> str:
+    transcription = await transcribe_audio(file_path)
     replyFromAI = process_simple_text(transcription)
-
     return replyFromAI
+
 
 def process_test(language_to_speak: str, language_level: str):
     prompt = (
