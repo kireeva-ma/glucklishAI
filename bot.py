@@ -91,9 +91,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
-    user_language = USER_LANGUAGES.get(user_id, {}).get("native", "en")
-    help_message = translations["help"].get(user_language, translations["help"]["en"])
+    user_language = update.effective_user.language_code  # язык, установленный у пользователя в Telegram
+    help_message = translations["help"].get(user_language, translations["help"]["en"])  # fallback на английский
     await update.message.reply_text(help_message)
 
 
