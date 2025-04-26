@@ -7,6 +7,7 @@ load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 client = openai.OpenAI(api_key=api_key)
 
+# from audio file to text
 async def transcribe_audio(file_path):
     with open(file_path, "rb") as audio_file:
         transcription = client.audio.transcriptions.create(
@@ -15,11 +16,13 @@ async def transcribe_audio(file_path):
         )
     return transcription.text
 
-async def generate_reply(user_text):
+async def generate_reply_from_start(user_text, language_to_speak: str, language_level: str):
     prompt = (
-        "You are a friendly German barista. Correct mistakes softly if needed.\n"
-        f"User: {user_text}\nYou:"
+        f"You are a friendly native speaker helping the user learn {language_to_speak} with {language_level} level of language proficiency.\n"
+        f"Speak casually, correct mistakes softly if necessary.\n\n"
+        f"Be polite and friendly.\n"
     )
+
     response = client.chat.completions.create(
         model="gpt-4",
         messages=[{"role": "user", "content": prompt}]
@@ -27,12 +30,25 @@ async def generate_reply(user_text):
     return response.choices[0].message.content
 
 
+
+def process_text(user_text: str):
+   prompt = (
+        f"User's message: {user_text}\n"
+        f"Your reply:"
+   )
+
+   response = client.chat.completions.create(
+       model="gpt-4",
+       messages=[{"role": "user", "content": prompt}]
+   )
+   return response.choices[0].message.content
+
+
+
 def process_voice(file_path: str) -> str:
-    """
-    Given a path to an audio file, transcribe it and generate a GPT reply.
-    Returns the AI's answer as a string.
-    """
-    # transcription
-    # prompt generation
-    # gpt call
-    # return gpt's reply
+    transcription = transcribe_audio(file_path)
+    replyFromAI = process_text(transcription)
+
+    return replyFromAI
+
+
