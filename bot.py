@@ -74,21 +74,27 @@ def parse_test_content(content: str):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    user_language_code = update.message.from_user.language_code
+    user_language_code = update.effective_user.language_code  # язык пользователя в Telegram
 
-    user_language = LANGUAGES.get(user_language_code, 'en')
+    user_language = LANGUAGES.get(user_language_code, 'en')  # если язык неизвестен — fallback на английский
 
-    USER_LANGUAGES[user_id] = {"native": user_language, "learning": None, "language_level": None, "stage": "choose_language"}
+    USER_LANGUAGES[user_id] = {
+        "native": user_language,
+        "learning": None,
+        "language_level": None,
+        "stage": "choose_language"
+    }
 
-    start_message = translations["start"].get(user_language, translations["start"]["en"])
+    start_message = translations["start"].get(user_language_code, translations["start"]["en"])  # используем язык Telegram
 
     language_buttons = [[language for language in LANGUAGES.values()]]
     reply_markup = ReplyKeyboardMarkup(language_buttons, one_time_keyboard=True, resize_keyboard=True)
 
     await update.message.reply_text(
-        start_message.format(LANGUAGES.get(user_language, 'your native language')),
+        start_message.format(LANGUAGES.get(user_language_code, 'your native language')),
         reply_markup=reply_markup
     )
+
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_language = update.effective_user.language_code  # язык, установленный у пользователя в Telegram
@@ -236,6 +242,24 @@ async def set_commands(app):
         BotCommand("daily", "Have some fun with your language learning!")
     ])
 
+# async def main():
+#     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+#
+#     await set_commands(app)
+#
+#     app.add_handler(CommandHandler("start", start))
+#     app.add_handler(CommandHandler("help", help_command))
+#     app.add_handler(CommandHandler("daily", daily_challenge))
+#     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+#     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
+#
+#     print("Bot is polling...")
+#     await app.run_polling()
+#
+# if __name__ == '__main__':
+#     import nest_asyncio
+#     nest_asyncio.apply()
+#     asyncio.get_event_loop().run_until_complete(main())
 async def main():
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
@@ -247,10 +271,18 @@ async def main():
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
 
-    print("Bot is polling...")
-    await app.run_polling()
+    webhook_url = "https://your-server.com/your-bot-path"  # <-- поставь сюда свой URL
+
+    print("Bot is running via webhook...")
+    await app.bot.set_webhook(webhook_url)
+    await app.run_webhook(
+        listen="0.0.0.0",
+        port=8443,  # обычно Telegram ждёт 443, 80, 88 или 8443
+        webhook_url=webhook_url
+    )
 
 if __name__ == '__main__':
     import nest_asyncio
+    import asyncio
     nest_asyncio.apply()
     asyncio.get_event_loop().run_until_complete(main())
