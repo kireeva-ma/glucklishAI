@@ -223,7 +223,7 @@ async def continue_conversation(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     learning_language_code = USER_LANGUAGES[update.message.from_user.id]["learning"]
-    learning_language = USER_LANGUAGES.get(learning_language_code)
+    learning_language = LANGUAGES[learning_language_code]
 
     try:
         voice = update.message.voice
