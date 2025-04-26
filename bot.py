@@ -55,12 +55,44 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     start_message = translations["start"].get(user_language, translations["start"]["en"])
 
     language_buttons = [[language for language in LANGUAGES.values()]]
-    reply_markup = ReplyKeyboardMarkup(language_buttons, one_time_keyboard=True)
+    language_keyboard = ReplyKeyboardMarkup(language_buttons, one_time_keyboard=True)
+
+    # Создаем дополнительные кнопки для меню
+    menu_buttons = [
+        [KeyboardButton(translations["help"].get(user_language, translations["help"]["en"]))],
+        [KeyboardButton(translations["restart"].get(user_language, translations["restart"]["en"]))],
+        [KeyboardButton(translations["stop"].get(user_language, translations["stop"]["en"]))],
+    ]
+    menu_keyboard = ReplyKeyboardMarkup(menu_buttons, one_time_keyboard=True)
 
     await update.message.reply_text(
         start_message.format(LANGUAGES.get(user_language, 'your native language')),
-        reply_markup=reply_markup
+        reply_markup=language_keyboard
     )
+
+    # Отправляем меню после выбора языка
+    await update.message.reply_text(
+        "Now, choose an action below.",
+        reply_markup=menu_keyboard
+    )
+
+# Добавим обработчик для кнопок меню
+async def handle_menu_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    user_language = USER_LANGUAGES.get(user_id, {}).get("native", "en")
+
+    # Перехватываем нажатие кнопок
+    text = update.message.text.strip().lower()
+
+    if "help" in text:
+        await help_command(update, context)
+    elif "restart" in text:
+        await restart(update, context)
+    elif "stop" in text:
+        await stop(update, context)
+    else:
+        await update.message.reply_text("Please choose an action from the menu.")
+
 
 async def test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
@@ -259,6 +291,59 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.exception("An error occurred while processing a voice message")
         await update.message.reply_text("Sorry, an error occurred while processing your voice message.")
 
+async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    user_language = USER_LANGUAGES.get(user_id, {}).get("native", "en")
+
+    restart_message = translations["restart"].get(user_language, translations["restart"]["en"])
+    await update.message.reply_text(restart_message)
+
+    # В зависимости от хостинга или окружения нужно перезапускать процесс бота
+    os.execv(sys.executable, ['python'] + sys.argv)
+
+async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    user_language = USER_LANGUAGES.get(user_id, {}).get("native", "en")
+
+    stop_message = translations["stop"].get(user_language, translations["stop"]["en"])
+    await update.message.reply_text(stop_message)
+
+    os._exit(0)  # Завершаем процесс бота
+
+# Обновляем команду help
+translations["help"].update({
+    "restart": {
+        "en": "💡 /restart - Restart the bot.",
+        "de": "💡 /restart - Starte den Bot neu.",
+        "fr": "💡 /restart - Redémarrer le bot.",
+        "es": "💡 /restart - Reiniciar el bot.",
+        "ru": "💡 /restart - Перезапустить бота."
+    },
+    "stop": {
+        "en": "💡 /stop - Stop the bot.",
+        "de": "💡 /stop - Stoppe den Bot.",
+        "fr": "💡 /stop - Arrêter le bot.",
+        "es": "💡 /stop - Detener el bot.",
+        "ru": "💡 /stop - Остановить бота."
+    }
+})
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    user_language = USER_LANGUAGES.get(user_id, {}).get("native", "en")
+
+    help_message = translations["help"].get(user_language, translations["help"]["en"])
+
+    # Пишем доступные команды
+    help_message += "\n\nCommands:\n"
+    help_message += "/start - Start the bot\n"
+    help_message += "/help - Get help information\n"
+    help_message += "/restart - Restart the bot\n"
+    help_message += "/stop - Stop the bot"
+
+    await update.message.reply_text(help_message)
+
+# Добавляем обработчики команд
 
 if __name__ == '__main__':
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
@@ -268,11 +353,13 @@ if __name__ == '__main__':
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_handler(CommandHandler("test", test_command))
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
+    app.add_handler(CommandHandler("restart", restart))
+    app.add_handler(CommandHandler("stop", stop))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu_selection))
 
 app.run_webhook(
     listen="0.0.0.0",
     port=int(os.environ.get('PORT', 8443)),
     webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/"
-
 )
 
