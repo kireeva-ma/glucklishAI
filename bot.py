@@ -79,22 +79,22 @@ async def handle_language_selection(update: Update, context: ContextTypes.DEFAUL
     user_id = update.message.from_user.id
     selected_language = update.message.text.lower()
 
-    # In LANGUAGES we use language codes, so check for the code instead of the name
+    # В LANGUAGES мы используем коды языков, поэтому проверяем их по коду, а не по названию
     selected_language_code = None
     for code, name in LANGUAGES.items():
         if name.lower() == selected_language:
             selected_language_code = code
             break
 
-    # Check if selected language is valid
+    # Проверяем, что выбранный язык допустим
     if selected_language_code:
-        # Store the learning language for the user
+        # Сохраняем выбранный язык для пользователя
         USER_LANGUAGES[user_id]["learning"] = selected_language_code
 
-        # Ask user to provide their language level
-        language_levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
+        # Просим выбрать уровень языка
+        valid_levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
         language_level_buttons = [
-            [level for level in language_levels]
+            [level] for level in valid_levels  # Генерируем кнопки для уровней
         ]
         reply_markup = ReplyKeyboardMarkup(language_level_buttons, one_time_keyboard=True)
 
@@ -107,16 +107,21 @@ async def handle_language_selection(update: Update, context: ContextTypes.DEFAUL
         await update.message.reply_text(
             "Sorry, I don't support that language. Please choose a valid language from the list."
         )
-
-
+# Функция для обработки выбора уровня языка
 async def handle_language_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    selected_level = update.message.text.upper()
+    selected_level = update.message.text.upper()  # Получаем текст уровня, который ввел пользователь
+
+    if not selected_level:  # Проверяем, если уровень не выбран
+        await update.message.reply_text(
+            "Please select a language level from the available options (A1, A2, B1, B2, C1, C2)."
+        )
+        return
 
     valid_levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
 
     if selected_level in valid_levels:
-        # Store the language level
+        # Сохраняем уровень языка
         USER_LANGUAGES[user_id]["language_level"] = selected_level
 
         await update.message.reply_text(
@@ -124,13 +129,12 @@ async def handle_language_level(update: Update, context: ContextTypes.DEFAULT_TY
             "We can now start the conversation in your learning language. Feel free to ask anything!"
         )
 
-        # Start conversation by calling the AI function
+        # Начинаем разговор
         await generate_conversation(update, context)
     else:
         await update.message.reply_text(
             "Please choose a valid level (A1, A2, B1, B2, C1, C2)."
         )
-
 
 async def generate_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
@@ -150,8 +154,7 @@ if __name__ == '__main__':
 
     app.add_handler(CommandHandler("start", start))  # Start command
     app.add_handler(CommandHandler("help", help_command))  # Help command
-    app.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, handle_language_selection))  # Handle language selection
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_language_level))  # Handle language level
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_language_selection))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_language_level))
 
     app.run_polling()
