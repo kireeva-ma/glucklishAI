@@ -213,7 +213,7 @@ async def set_commands(app):
     await app.bot.set_my_commands([
         BotCommand("start", "Start a new conversation"),
         BotCommand("help", "How to use your personal language tutor 🤖"),
-        BotCommand("Daily Challenge", "Have some fun with your language learning!")
+        BotCommand("daily", "Have some fun with your language learning!")
     ])
 
 async def main():
@@ -223,7 +223,7 @@ async def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("Daily Challenge", daily_challenge))
+    app.add_handler(CommandHandler("daily", daily_challenge))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
 
