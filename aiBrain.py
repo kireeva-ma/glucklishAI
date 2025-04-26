@@ -64,7 +64,8 @@ def text_to_audio(replyFromAI: str, learning_language: str):
         "German": "echo",
         "French": "fable",
         "Spanish": "onyx",
-        "Russian": "shimmer"
+        "Russian": "shimmer",
+        "Ukrainian": "echo",
     }
 
     # pick voice

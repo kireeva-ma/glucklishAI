@@ -20,7 +20,8 @@ LANGUAGES = {
     "de": "German",
     "fr": "French",
     "es": "Spanish",
-    "ru": "Russian"
+    "ru": "Russian",
+    "ua": "Ukrainian"
 }
 
 # Translations for /start and /help
@@ -30,14 +31,16 @@ translations = {
         "de": "🎉 Willkommen! Du sprichst {0}. Welche Sprache möchtest du lernen?",
         "fr": "🎉 Bienvenue! Vous parlez {0}. Quelle langue souhaitez-vous apprendre?",
         "es": "🎉 ¡Bienvenido! Estás hablando en {0}. ¿Qué idioma te gustaría aprender?",
-        "ru": "🎉 Добро пожаловать! Вы говорите на {0}. Какой язык вы хотите учить?"
+        "ru": "🎉 Добро пожаловать! Вы говорите на {0}. Какой язык вы хотите учить?",
+        "ua": "🎉 Вітаю! Ви розмовляєте {0}. Яку мову ви хочете вивчити?"
     },
     "help": {
         "en": "📝 Help: /start to start. /help to get help.",
         "de": "📝 Hilfe: /start um zu starten. /help für Hilfe.",
         "fr": "📝 Aide: /start pour commencer. /help pour obtenir de l'aide.",
         "es": "📝 Ayuda: /start para comenzar. /help para obtener ayuda.",
-        "ru": "📝 Помощь: /start для начала. /help для получения помощи."
+        "ru": "📝 Помощь: /start для начала. /help для получения помощи.",
+        "ua": "📝 Допомога: /start для початку. /help для отримання допомоги."
     }
 }
 
