@@ -109,7 +109,24 @@ async def daily_challenge(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     challenge_text = process_daily_challenge(learning_language)
 
-    await update.message.reply_text(challenge_text)
+    await update.message.reply_text("🧩 Daily Challenge:\n" + challenge_text)
+
+    # >>> Set the stage to "daily_challenge_answer"
+    USER_LANGUAGES[user_id]["stage"] = "daily_challenge_answer"
+
+
+async def handle_daily_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    learning_language = USER_LANGUAGES[user_id]["learning"]
+
+    gpt_reply = process_simple_text(update.message.text, learning_language)
+
+    await update.message.reply_text(f"🏆 Here's feedback on your daily challenge answer:")
+    await update.message.reply_text(gpt_reply)
+
+    # Switch back to normal conversation
+    USER_LANGUAGES[user_id]["stage"] = "conversation"
+
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
@@ -128,6 +145,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_language_level(update, context)
     elif stage == "conversation":
         await continue_conversation(update, context)
+    elif stage == "daily_challenge_answer":
+        await handle_daily_answer(update, context)
     else:
         await update.message.reply_text("I'm not sure what to do. Please type /start.")
 
