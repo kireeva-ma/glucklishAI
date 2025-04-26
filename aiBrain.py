@@ -33,10 +33,10 @@ async def generate_reply_from_start(user_language: str, language_level: str):
 
 
 
-def process_simple_text(user_text: str):
+def process_simple_text(user_text: str, learning_language: str):
    prompt = (
-        f"User's message: {user_text}\n"
-        f"Your short reply:"
+        f"User's message in {learning_language}: {user_text}\n"
+        f"Your short reply {learning_language}:"
    )
 
    response = client.chat.completions.create(
@@ -51,17 +51,26 @@ def process_voice(file_path: str) -> str:
 
     return replyFromAI
 
-def process_test(language_to_speak: str, language_level: str):
+def create_simple_question(learning_language: str):
     prompt = (
-        f"Generate a small multiple-choice test for {language_to_speak} language for the {language_level} level of language proficiency.\n"
-        f"Test must consist of 3 questions and have 4 possible answers.\n"
+        f"Create a multiple-choice question in {learning_language} language to determiner the level of language of user:\n"
+        f"- One question\n"
+        f"- 4 answer options\n"
+        f"- Mark the correct answer with [*] at the end\n"
     )
 
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "user", "content": prompt}]
     )
-    return response.choices[0].message.content
+
+    full_text = response.choices[0].message.content
+
+    lines = full_text.strip().split("\n")
+    question = lines[0]
+    options = [line[3:].replace("[*]", "").strip() for line in lines[1:]]
+
+    return question, options
 
 
 def process_translate(user_text: str, language_of_user: str, target_language: str):
@@ -76,5 +85,5 @@ def process_translate(user_text: str, language_of_user: str, target_language: st
     return response.choices[0].message.content
 
 
-print(process_test("German", "A1"))
+print(create_simple_question("German"))
 
