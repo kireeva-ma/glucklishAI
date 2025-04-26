@@ -1,14 +1,12 @@
 import logging
-from telegram import Update, InputFile
-from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
-import openai
+from telegram import Update, InputFile, ReplyKeyboardMarkup
+from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes, CommandHandler
+
 from dotenv import load_dotenv
 import os
-
-from telegram.ext import CommandHandler
-
+import openai
 from aiBrain import client
-# from aiBrain import process_voice
+from aiBrain import process_voice
 
 
 # Load environment variables
@@ -23,8 +21,78 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 openai.api_key = OPENAI_API_KEY
 
+USER_LANGUAGES = {}
+# This is a basic set of languages you support
+LANGUAGES = {
+    "en": "English",
+    "de": "German",
+    "fr": "French",
+    "es": "Spanish",
+    "ru": "Russian"
+}
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🎉 Willkommen! Sende mir eine Sprachnachricht, und wir üben zusammen!")
+    user_id = update.message.from_user.id
+    user_language = update.message.from_user.language_code
+
+    # Save the user's native language for future reference
+    USER_LANGUAGES[user_id] = {"native": user_language, "learning": None}
+
+    # Ask user what language they want to learn
+    language_buttons = [
+        [language for language in LANGUAGES.values()]
+    ]
+    reply_markup = ReplyKeyboardMarkup(language_buttons, one_time_keyboard=True)
+
+    await update.message.reply_text(
+        f"🎉 Welcome! You are speaking in {LANGUAGES.get(user_language, 'your native language')}. "
+        "Which language would you like to learn?",
+        reply_markup=reply_markup
+    )
+
+
+async def handle_language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    selected_language = update.message.text.lower()
+
+    if selected_language in LANGUAGES:
+        # Store the learning language for the user
+        USER_LANGUAGES[user_id]["learning"] = selected_language
+        await update.message.reply_text(
+            f"Great choice! I'll now communicate with you in {LANGUAGES[selected_language]}.")
+    else:
+        await update.message.reply_text(
+            "Sorry, I don't support that language. Please choose a valid language from the list.")
+
+
+async def process_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    learning_language = USER_LANGUAGES.get(user_id, {}).get("learning", "en")
+
+    # Process the voice message (the transcription logic will go in the brain)
+    # For now, we can just reply with the user's learning language as a placeholder
+    await update.message.reply_text(
+        f"Processing your voice message in {LANGUAGES.get(learning_language, 'English')}...")
+
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    native_language = USER_LANGUAGES.get(user_id, {}).get("native", "en")
+
+    help_text = (
+        f"📝 *Help*:\n\n"
+        f"Welcome to the language learning bot! Here’s what you can do:\n\n"
+        f"/start - Start the language learning process.\n"
+        f"/help - Display this help message.\n\n"
+        f"Once you’ve selected a language, I will respond in the language you’re learning.\n\n"
+        f"Your native language is: {LANGUAGES.get(native_language, 'unknown')}\n"
+        f"You can always change your learning language by typing it directly (English, German, etc.).\n\n"
+        f"To get the most out of this bot, just send me messages or voice recordings!"
+    )
+
+    await update.message.reply_text(help_text)
+
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -42,23 +110,6 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.error(f"Error handling voice: {e}")
         await update.message.reply_text("😵‍💫 Oops! Something went wrong. Please try again!")
 
-
-
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message = update.message.text
-    if message.lower() == "hi" or message.lower() == "hello":
-        await update.message.reply_text("👋 Hallo! Wie kann ich dir helfen?")
-    else:
-        await update.message.reply_text("🧑‍💻 Ich bin dein Sprachassistent. Sende mir eine Sprachnachricht, um zu üben!")
-
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    help_text = (
-        "📚 *How to use the bot:*\n\n"
-        "/start - Start the conversation.\n"
-        "Send a voice message for transcription and correction.\n"
-        "If you need help, type /help."
-    )
-    await update.message.reply_text(help_text, parse_mode="Markdown")
 
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -91,10 +142,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == '__main__':
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
-    app.add_handler(CommandHandler("start", start))  # <-- Correct
-    app.add_handler(MessageHandler(filters.VOICE, handle_voice))  # <-- Correct
-    app.add_handler(MessageHandler(filters.TEXT, handle_text))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(MessageHandler(filters.TEXT, handle_message))  # Handle all regular messages
+    app.add_handler(CommandHandler("start", start))  # Start command
+    app.add_handler(CommandHandler("help", help_command))  # Help command
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_language_selection))  # Handle language selection
+    app.add_handler(MessageHandler(filters.VOICE, process_voice))  # Handle voice messages
 
-    app.run_polling()
+app.run_polling()
