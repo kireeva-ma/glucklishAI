@@ -260,10 +260,8 @@ async def set_commands(app):
 #     import nest_asyncio
 #     nest_asyncio.apply()
 #     asyncio.get_event_loop().run_until_complete(main())
-async def main():
-    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
-
-    await set_commands(app)
+    if __name__ == '__main__':
+        app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
@@ -271,18 +269,11 @@ async def main():
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
 
-    webhook_url = "https://your-server.com/your-bot-path"  # <-- поставь сюда свой URL
 
-    print("Bot is running via webhook...")
-    await app.bot.set_webhook(webhook_url)
-    await app.run_webhook(
-        listen="0.0.0.0",
-        port=8443,  # обычно Telegram ждёт 443, 80, 88 или 8443
-        webhook_url=webhook_url
-    )
+    app.run_webhook(
+    listen="0.0.0.0",
+    port=int(os.environ.get('PORT', 8443)),
+    webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/"
 
-if __name__ == '__main__':
-    import nest_asyncio
-    import asyncio
-    nest_asyncio.apply()
-    asyncio.get_event_loop().run_until_complete(main())
+)
+
