@@ -1,10 +1,12 @@
 import logging
 from telegram import Update, ReplyKeyboardMarkup
+from telegram import BotCommand
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes, CommandHandler
 from dotenv import load_dotenv
 import os
 from aiBrain import generate_reply_from_start, process_simple_text, process_voice
 import re
+import asyncio
 # Load environment variables
 load_dotenv()
 
@@ -35,12 +37,12 @@ translations = {
         "ua": "🎉 Вітаю! Ви розмовляєте {0}. Яку мову ви хочете вивчити?"
     },
     "help": {
-        "en": "📝 Help: /start to start. /help to get help.",
-        "de": "📝 Hilfe: /start um zu starten. /help für Hilfe.",
-        "fr": "📝 Aide: /start pour commencer. /help pour obtenir de l'aide.",
-        "es": "📝 Ayuda: /start para comenzar. /help para obtener ayuda.",
-        "ru": "📝 Помощь: /start для начала. /help для получения помощи.",
-        "ua": "📝 Допомога: /start для початку. /help для отримання допомоги."
+        "en": "👩‍🏫 This bot is your personal language teacher! Use /start to set your language and level. Then just talk to me in your chosen language.",
+        "de": "👩‍🏫 Dieser Bot ist dein persönlicher Sprachlehrer! Verwende /start, um deine Sprache und dein Niveau einzustellen. Danach kannst du einfach mit mir in der gewählten Sprache sprechen. ",
+        "fr": "👩‍🏫 Ce bot est ton professeur de langues personnel ! Utilise /start pour choisir ta langue et ton niveau. Ensuite, parle-moi simplement dans ta langue choisie.",
+        "es": "👩‍🏫 ¡Este bot es tu profesor personal de idiomas! Usa /start para configurar tu idioma y nivel. Luego simplemente habla conmigo en el idioma elegido.",
+        "ru": "👩‍🏫 Этот бот — твой персональный учитель языков! Используй /start, чтобы выбрать язык и уровень. Потом просто общайся со мной на выбранном языке.",
+        "ua": "👩‍🏫 Цей бот — твій персональний вчитель мов! Використовуй /start, щоб вибрати мову та рівень. Потім просто спілкуйся зі мною обраною мовою."
     }
 }
 
@@ -259,19 +261,21 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.exception("An error occurred while processing a voice message")
         await update.message.reply_text("Sorry, an error occurred while processing your voice message.")
 
+async def set_commands(app):
+    await app.bot.set_my_commands([
+        BotCommand("start", "Start a new conversation"),
+        BotCommand("help", "How to use your personal language tutor 🤖")
+    ])
+
+
+
+async def main():
+    await set_commands(app)
+    await app.run_webhook(
+        listen="0.0.0.0",
+        port=int(os.environ.get('PORT', 8443)),
+        webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/"
+    )
 
 if __name__ == '__main__':
-    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.add_handler(CommandHandler("test", test_command))
-    app.add_handler(MessageHandler(filters.VOICE, handle_voice))
-
-app.run_webhook(
-    listen="0.0.0.0",
-    port=int(os.environ.get('PORT', 8443)),
-    webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/"
-
-)
+    asyncio.run(main())
