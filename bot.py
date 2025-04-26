@@ -42,8 +42,15 @@ translations = {
         "es": "📝 Ayuda: /start para comenzar. /help para obtener ayuda.",
         "ru": "📝 Помощь: /start для начала. /help для получения помощи.",
         "ua": "📝 Допомога: /start для початку. /help для отримання допомоги."
+    },
+    "restart": {
+        "en": "🔄 Restart",
+        "de": "🔄 Neustarten",
+        "fr": "🔄 Redémarrer",
+        "es": "🔄 Reiniciar",
+        "ru": "🔄 Перезапустить",
+        "ua": "🔄 Перезапустити"
     }
-}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
@@ -60,9 +67,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Создаем дополнительные кнопки для меню
     menu_buttons = [
-        [KeyboardButton(translations["help"].get(user_language, translations["help"]["en"]))],
-        [KeyboardButton(translations["restart"].get(user_language, translations["restart"]["en"]))],
-        [KeyboardButton(translations["stop"].get(user_language, translations["stop"]["en"]))],
+        [KeyboardButton(translations["help"]["en"])],
+        [KeyboardButton(translations["restart"]["en"])],
+        [KeyboardButton(translations["stop"]["en"])],
     ]
     menu_keyboard = ReplyKeyboardMarkup(menu_buttons, one_time_keyboard=True)
 
