@@ -1,13 +1,11 @@
 import logging
-from telegram import Update, InputFile, ReplyKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes, CommandHandler
-
 from dotenv import load_dotenv
 import os
 import openai
 from aiBrain import client
 from aiBrain import process_voice
-
 
 # Load environment variables
 load_dotenv()
@@ -22,7 +20,6 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 openai.api_key = OPENAI_API_KEY
 
 USER_LANGUAGES = {}
-# This is a basic set of languages you support
 LANGUAGES = {
     "en": "English",
     "de": "German",
@@ -31,7 +28,25 @@ LANGUAGES = {
     "ru": "Russian"
 }
 
+# Translations for user messages
+translations = {
+    "start": {
+        "en": "🎉 Welcome! You are speaking in {native}. Which language would you like to learn?",
+        "de": "🎉 Willkommen! Du sprichst {native}. Welche Sprache möchtest du lernen?",
+        "fr": "🎉 Bienvenue ! Vous parlez {native}. Quelle langue souhaitez-vous apprendre ?",
+        "es": "🎉 ¡Bienvenido! Hablas {native}. ¿Qué idioma te gustaría aprender?",
+        "ru": "🎉 Добро пожаловать! Вы говорите на {native}. Какой язык вы хотите учить?"
+    },
+    "help": {
+        "en": "📝 *Help*:\n\nWelcome to the language learning bot! Here’s what you can do:\n\n/start - Start the language learning process.\n/help - Display this help message.",
+        "de": "📝 *Hilfe*:\n\nWillkommen beim Sprachlern-Bot! Hier ist, was du tun kannst:\n\n/start - Starte den Sprachlernprozess.\n/help - Zeige diese Hilfemeldung an.",
+        "fr": "📝 *Aide*:\n\nBienvenue dans le bot d'apprentissage des langues ! Voici ce que vous pouvez faire:\n\n/start - Démarrez le processus d'apprentissage des langues.\n/help - Affichez ce message d'aide.",
+        "es": "📝 *Ayuda*:\n\n¡Bienvenido al bot de aprendizaje de idiomas! Aquí está lo que puedes hacer:\n\n/start - Iniciar el proceso de aprendizaje de idiomas.\n/help - Mostrar este mensaje de ayuda.",
+        "ru": "📝 *Помощь*:\n\nДобро пожаловать в бот для изучения языков! Вот что вы можете сделать:\n\n/start - Начать процесс обучения языку.\n/help - Показать это сообщение помощи."
+    }
+}
 
+# Start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     user_language = update.message.from_user.language_code
@@ -46,97 +61,42 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = ReplyKeyboardMarkup(language_buttons, one_time_keyboard=True)
 
     await update.message.reply_text(
-        f"🎉 Welcome! You are speaking in {LANGUAGES.get(user_language, 'your native language')}. "
-        "Which language would you like to learn?",
+        translations["start"].get(user_language, translations["start"]["en"]).format(native=LANGUAGES.get(user_language, 'your native language')),
         reply_markup=reply_markup
     )
 
-
+# Handle language selection
 async def handle_language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     selected_language = update.message.text.lower()
 
-    if selected_language in LANGUAGES:
+    # In LANGUAGES we use language codes, so check for the code instead of the name
+    selected_language_code = None
+    for code, name in LANGUAGES.items():
+        if name.lower() == selected_language:
+            selected_language_code = code
+            break
+
+    # Check if selected language is valid
+    if selected_language_code:
         # Store the learning language for the user
-        USER_LANGUAGES[user_id]["learning"] = selected_language
+        USER_LANGUAGES[user_id]["learning"] = selected_language_code
         await update.message.reply_text(
-            f"Great choice! I'll now communicate with you in {LANGUAGES[selected_language]}.")
+            f"Great choice! I'll now communicate with you in {LANGUAGES[selected_language_code]}."
+        )
     else:
         await update.message.reply_text(
-            "Sorry, I don't support that language. Please choose a valid language from the list.")
+            "Sorry, I don't support that language. Please choose a valid language from the list."
+        )
 
-
-async def process_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
-    learning_language = USER_LANGUAGES.get(user_id, {}).get("learning", "en")
-
-    # Process the voice message (the transcription logic will go in the brain)
-    # For now, we can just reply with the user's learning language as a placeholder
-    await update.message.reply_text(
-        f"Processing your voice message in {LANGUAGES.get(learning_language, 'English')}...")
-
-
+# Help command
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    native_language = USER_LANGUAGES.get(user_id, {}).get("native", "en")
+    user_language = USER_LANGUAGES.get(user_id, {}).get("native", "en")
 
-    help_text = (
-        f"📝 *Help*:\n\n"
-        f"Welcome to the language learning bot! Here’s what you can do:\n\n"
-        f"/start - Start the language learning process.\n"
-        f"/help - Display this help message.\n\n"
-        f"Once you’ve selected a language, I will respond in the language you’re learning.\n\n"
-        f"Your native language is: {LANGUAGES.get(native_language, 'unknown')}\n"
-        f"You can always change your learning language by typing it directly (English, German, etc.).\n\n"
-        f"To get the most out of this bot, just send me messages or voice recordings!"
-    )
+    help_text = translations["help"].get(user_language, translations["help"]["en"])
 
     await update.message.reply_text(help_text)
-
-
-async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        thinking_message = await update.message.reply_text("🤔 Lass mich kurz überlegen...")
-
-        voice = update.message.voice
-        file = await context.bot.get_file(voice.file_id)
-        file_path = await file.download_to_drive()
-
-        ai_reply = process_voice(file_path)  # <--- call aiBrain!
-
-        await thinking_message.edit_text(ai_reply)
-
-    except Exception as e:
-        logging.error(f"Error handling voice: {e}")
-        await update.message.reply_text("😵‍💫 Oops! Something went wrong. Please try again!")
-
-
-
-async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        thinking_message = await update.message.reply_text("🤔 Einen Moment...")
-
-        user_text = update.message.text
-
-        prompt = (
-            "You are a native German-speaking barista. "
-            "Speak casually and friendly. "
-            "Correct user's German softly if needed.\n"
-            f"User: {user_text}\nYou:"
-        )
-
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        ai_reply = response['choices'][0]['message']['content']
-
-        await thinking_message.edit_text(ai_reply)
-
-    except Exception as e:
-        logging.error(f"Error handling text: {e}")
-        await update.message.reply_text("😵‍💫 Oops! Something went wrong. Please try again!")
-
 
 # --- App ---
 if __name__ == '__main__':
@@ -145,6 +105,5 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("start", start))  # Start command
     app.add_handler(CommandHandler("help", help_command))  # Help command
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_language_selection))  # Handle language selection
-    app.add_handler(MessageHandler(filters.VOICE, process_voice))  # Handle voice messages
 
-app.run_polling()
+    app.run_polling()
