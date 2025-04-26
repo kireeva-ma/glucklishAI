@@ -51,7 +51,7 @@ translations = {
         "ru": "🔄 Перезапустить",
         "ua": "🔄 Перезапустити"
     }
-
+}
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     user_language_code = update.message.from_user.language_code
