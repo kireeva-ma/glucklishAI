@@ -8,7 +8,7 @@ import os
 from telegram.ext import CommandHandler
 
 from aiBrain import client
-# from aiBrain import process_voice
+from aiBrain import process_voice
 
 
 # Load environment variables
