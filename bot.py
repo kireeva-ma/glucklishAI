@@ -50,6 +50,13 @@ translations = {
         "es": "🔄 Reiniciar",
         "ru": "🔄 Перезапустить",
         "ua": "🔄 Перезапустити"
+    },
+    "stop": {
+        "en": "💡 /stop - Stop the bot.",
+        "de": "💡 /stop - Stoppe den Bot.",
+        "fr": "💡 /stop - Arrêter le bot.",
+        "es": "💡 /stop - Detener el bot.",
+        "ru": "💡 /stop - Остановить бота."
     }
 }
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
