@@ -33,10 +33,10 @@ async def generate_reply_from_start(user_language: str, language_level: str):
 
 
 
-def process_simple_text(user_text: str):
+def process_simple_text(user_text: str, learning_language: str):
    prompt = (
-        f"User's message: {user_text}\n"
-        f"Your short reply:"
+        f"User's message in {learning_language}: {user_text}\n"
+        f"Your short reply {learning_language}:"
    )
 
    response = client.chat.completions.create(
@@ -45,10 +45,30 @@ def process_simple_text(user_text: str):
    )
    return response.choices[0].message.content
 
-async def process_voice(file_path: str) -> str:
+async def process_voice(file_path: str, learning_language: str, toSpeech: bool):
     transcription = await transcribe_audio(file_path)
-    replyFromAI = process_simple_text(transcription)
-    return replyFromAI
+    replyFromAI = process_simple_text(transcription, learning_language)
+    return text_to_audio(replyFromAI, learning_language) if toSpeech else replyFromAI
+
+def text_to_audio(replyFromAI: str, learning_language: str):
+    voices = {
+        "English": "en-US-Wavenet-D",
+        "German": "de-DE-Wavenet-B",
+        "French": "fr-FR-Wavenet-C",
+        "Spanish": "es-ES-Wavenet-A",
+        "Russian": "ru-RU-Wavenet-A"
+    }
+
+    voice = voices[learning_language]
+
+    audio = client.audio.synthesis.create(
+        text=replyFromAI,
+        voice=voice,
+        audio_format="mp3"
+    )
+    return audio
+
+
 
 
 def process_test(language_to_speak: str, language_level: str):
@@ -76,5 +96,5 @@ def process_translate(user_text: str, language_of_user: str, target_language: st
     return response.choices[0].message.content
 
 
-print(process_test("German", "A1"))
+
 
