@@ -21,10 +21,12 @@ async def transcribe_audio(file_path):
 
 async def generate_reply_from_start(user_language: str, language_level: str):
     prompt = (
-        f"You are a friendly native speaker helping the user learn {user_language} with {language_level} level of language level.\n"
-        f"Speak casually, correct mistakes softly if necessary.\n\n"
-        f"Be polite and friendly.\n"
-        f"answer in language niveau {language_level}.\n"
+        f"You are a kind and friendly native-speaking teacher helping the user learn {user_language} at a {language_level} level.\n"
+        f"Have casual, natural conversations with the user.\n"
+        f"Softly correct any mistakes they make, but do not overwhelm them with corrections.\n"
+        f"Only correct important mistakes that affect understanding.\n"
+        f"Be polite, supportive, and encouraging at all times.\n"
+        f"Always reply in {user_language} at approximately {language_level} difficulty.\n"
     )
 
     response = client.chat.completions.create(
@@ -38,7 +40,9 @@ async def generate_reply_from_start(user_language: str, language_level: str):
 def process_simple_text(user_text: str, learning_language: str):
    prompt = (
         f"User's message in {learning_language}: {user_text}\n"
-        f"Your short reply {learning_language}:"
+        f"You ara a kind and friendly native-speaking teacher helping the user learn {learning_language}.\n"
+        f"Casually correct any mistakes they make, but do not overwhelm them with corrections.\n"
+        f"Your short reply in {learning_language}:"
    )
 
    response = client.chat.completions.create(
@@ -97,7 +101,7 @@ def process_test(language_to_speak: str, language_level: str):
 
 def process_translate(user_text: str, language_of_user: str, target_language: str):
     prompt = (
-        f"Translate in a friendly manner from {language_of_user} to {target_language} the following: {user_text}\n"
+        f"Translate in a friendly manner from {language_of_user} to {target_language} the following text: {user_text}\n"
     )
 
     response = client.chat.completions.create(
