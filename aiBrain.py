@@ -1,6 +1,8 @@
 import openai
 import os
 from dotenv import load_dotenv
+from io import BytesIO
+
 
 load_dotenv()
 
@@ -58,23 +60,25 @@ async def process_voice(file_path: str, learning_language: str, toSpeech: bool):
 
 def text_to_audio(replyFromAI: str, learning_language: str):
     voices = {
-        "English": "en-US-Wavenet-D",
-        "German": "de-DE-Wavenet-B",
-        "French": "fr-FR-Wavenet-C",
-        "Spanish": "es-ES-Wavenet-A",
-        "Russian": "ru-RU-Wavenet-A"
+        "English": "nova",
+        "German": "echo",
+        "French": "fable",
+        "Spanish": "onyx",
+        "Russian": "shimmer"
     }
 
-    voice = voices[learning_language]
+    # pick voice
+    voice = voices.get(learning_language, "nova")
 
-    audio = client.audio.synthesis.create(
-        text=replyFromAI,
+    # Create speech with OpenAI
+    response = openai.audio.speech.create(
+        model="tts-1",  # or "tts-1-hd" (higher quality but bigger)
+        input=replyFromAI,
         voice=voice,
-        audio_format="mp3"
+        response_format="mp3"
     )
-    return audio
 
-
+    return response.content
 
 
 def process_test(language_to_speak: str, language_level: str):
