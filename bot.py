@@ -28,7 +28,7 @@ LANGUAGES = {
     "ru": "Russian"
 }
 
-# Translations for user messages
+# Translations for user messages v
 translations = {
     "start": {
         "en": "🎉 Welcome! You are speaking in {native}. Which language would you like to learn?",
