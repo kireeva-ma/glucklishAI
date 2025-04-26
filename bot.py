@@ -3,7 +3,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes, CommandHandler
 from dotenv import load_dotenv
 import os
-from aiBrain import generate_reply_from_start
+from aiBrain import generate_reply_from_start, process_simple_text
 
 # Load environment variables
 load_dotenv()
@@ -124,12 +124,17 @@ async def handle_language_level(update: Update, context: ContextTypes.DEFAULT_TY
         USER_LANGUAGES[user_id]["language_level"] = selected_level
         USER_LANGUAGES[user_id]["stage"] = "conversation"
 
-        await update.message.reply_text(
+        learning_language = LANGUAGES[USER_LANGUAGES[user_id]['learning']]
+        language_level = USER_LANGUAGES[user_id]['language_level']
 
-            f"Got it! Your level in {LANGUAGES[USER_LANGUAGES[user_id]['learning']]} is set to {selected_level}. We can now start the conversation!"
-        )
+        # ⮕ New: generate GPT welcome message
+        welcome_message = await generate_reply_from_start(learning_language, language_level)
 
+        await update.message.reply_text(welcome_message)
+
+        # ⮕ Then continue conversation
         await continue_conversation(update, context)
+
     else:
         await update.message.reply_text("Please choose a valid level (A1, A2, B1, B2, C1, C2).")
 
@@ -138,7 +143,7 @@ async def continue_conversation(update: Update, context: ContextTypes.DEFAULT_TY
     learning_language = USER_LANGUAGES[user_id]["learning"]
     language_level = USER_LANGUAGES[user_id]["language_level"]
 
-    gpt_reply = await generate_reply_from_start(update.message.text, LANGUAGES[learning_language], language_level)
+    gpt_reply = process_simple_text(update.message.text,)
 
     await update.message.reply_text(gpt_reply)
 
