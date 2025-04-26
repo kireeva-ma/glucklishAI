@@ -1,13 +1,11 @@
-import os
-import re
 import logging
-import asyncio
-from dotenv import load_dotenv
 from telegram import Update, ReplyKeyboardMarkup, BotCommand
-from telegram.ext import (
-    ApplicationBuilder, MessageHandler, filters, ContextTypes, CommandHandler
-)
+from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes, CommandHandler
+from dotenv import load_dotenv
+import os
 from aiBrain import generate_reply_from_start, process_simple_text, process_voice
+import re
+import asyncio
 
 # Load environment variables
 load_dotenv()
@@ -15,13 +13,10 @@ load_dotenv()
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 
-# Bot token
+# Your API keys from environment variables
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
-# User state storage
 USER_LANGUAGES = {}
-
-# Supported languages
 LANGUAGES = {
     "en": "English",
     "de": "German",
@@ -31,7 +26,6 @@ LANGUAGES = {
     "ua": "Ukrainian"
 }
 
-# Translations
 translations = {
     "start": {
         "en": "🎉 Welcome! You are speaking in {0}. Which language would you like to learn?",
@@ -51,22 +45,44 @@ translations = {
     }
 }
 
-# Handlers
+def parse_test_content(content: str):
+    questions = []
+    question_blocks = re.split(r"\n\d+\.", content)
+
+    for block in question_blocks:
+        block = block.strip()
+        if not block:
+            continue
+
+        lines = block.split('\n')
+        question = lines[0]
+        options = []
+
+        for line in lines[1:]:
+            match = re.match(r"[A-D]\)\s*(.*)", line.strip())
+            if match:
+                options.append(match.group(1))
+
+        if question and options:
+            questions.append({
+                "question": question,
+                "options": options
+            })
+
+    return questions
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     user_language_code = update.message.from_user.language_code
+
     user_language = LANGUAGES.get(user_language_code, 'en')
 
-    USER_LANGUAGES[user_id] = {
-        "native": user_language,
-        "learning": None,
-        "language_level": None,
-        "stage": "choose_language"
-    }
+    USER_LANGUAGES[user_id] = {"native": user_language, "learning": None, "language_level": None, "stage": "choose_language"}
 
     start_message = translations["start"].get(user_language, translations["start"]["en"])
+
     language_buttons = [[language for language in LANGUAGES.values()]]
-    reply_markup = ReplyKeyboardMarkup(language_buttons, one_time_keyboard=True)
+    reply_markup = ReplyKeyboardMarkup(language_buttons, one_time_keyboard=True, resize_keyboard=True)
 
     await update.message.reply_text(
         start_message.format(LANGUAGES.get(user_language, 'your native language')),
@@ -88,6 +104,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     stage = user_state.get("stage")
+    text = update.message.text.strip()
+
     if stage == "choose_language":
         await handle_language_selection(update, context)
     elif stage == "choose_level":
@@ -101,14 +119,18 @@ async def handle_language_selection(update: Update, context: ContextTypes.DEFAUL
     user_id = update.message.from_user.id
     selected_language = update.message.text.lower()
 
-    selected_language_code = next((code for code, name in LANGUAGES.items() if name.lower() == selected_language), None)
+    selected_language_code = None
+    for code, name in LANGUAGES.items():
+        if name.lower() == selected_language:
+            selected_language_code = code
+            break
 
     if selected_language_code:
         USER_LANGUAGES[user_id]["learning"] = selected_language_code
         USER_LANGUAGES[user_id]["stage"] = "choose_level"
 
         language_levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
-        reply_markup = ReplyKeyboardMarkup([[level for level in language_levels]], one_time_keyboard=True)
+        reply_markup = ReplyKeyboardMarkup([[level for level in language_levels]], one_time_keyboard=True, resize_keyboard=True)
 
         await update.message.reply_text(
             f"Great choice! You've selected {LANGUAGES[selected_language_code]}. Now, please tell me your language level (e.g., A1, B2, etc.).",
@@ -121,10 +143,10 @@ async def handle_language_selection(update: Update, context: ContextTypes.DEFAUL
 
 async def handle_language_level(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    selected_level = update.message.text.strip().upper()
+    selected_level = update.message.text.strip()
 
-    if selected_level in ["A1", "A2", "B1", "B2", "C1", "C2"]:
-        USER_LANGUAGES[user_id]["language_level"] = selected_level
+    if selected_level.upper() in ["A1", "A2", "B1", "B2", "C1", "C2"]:
+        USER_LANGUAGES[user_id]["language_level"] = selected_level.upper()
         USER_LANGUAGES[user_id]["stage"] = "conversation"
 
         learning_language = LANGUAGES[USER_LANGUAGES[user_id]['learning']]
@@ -134,18 +156,18 @@ async def handle_language_level(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text(welcome_message)
         await continue_conversation(update, context)
     else:
-        await update.message.reply_text("Please choose a valid level: A1, A2, B1, B2, C1, or C2.")
+        await update.message.reply_text("Please choose a valid level like A1, B2, etc.")
 
 async def continue_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     learning_language = USER_LANGUAGES[user_id]["learning"]
 
     gpt_reply = process_simple_text(update.message.text, learning_language)
+
     await update.message.reply_text(gpt_reply)
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
-    learning_language_code = USER_LANGUAGES[user_id]["learning"]
+    learning_language_code = USER_LANGUAGES[update.message.from_user.id]["learning"]
     learning_language = LANGUAGES[learning_language_code]
 
     try:
@@ -168,7 +190,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         os.remove(local_file_path)
 
     except Exception as e:
-        logging.exception("Error while processing voice message")
+        logging.exception("An error occurred while processing a voice message")
         await update.message.reply_text("Sorry, an error occurred while processing your voice message.")
 
 async def set_commands(app):
@@ -177,36 +199,20 @@ async def set_commands(app):
         BotCommand("help", "How to use your personal language tutor 🤖")
     ])
 
-def parse_test_content(content: str):
-    questions = []
-    blocks = re.split(r"\n\d+\.", content)
-
-    for block in blocks:
-        block = block.strip()
-        if not block:
-            continue
-        lines = block.split('\n')
-        question = lines[0]
-        options = [re.match(r"[A-D]\)\s*(.*)", line).group(1) for line in lines[1:] if re.match(r"[A-D]\)\s*(.*)", line)]
-        if question and options:
-            questions.append({"question": question, "options": options})
-
-    return questions
-
 async def main():
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
+    await set_commands(app)
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
 
-    await set_commands(app)
-    await app.run_webhook(
-        listen="0.0.0.0",
-        port=int(os.environ.get('PORT', 8443)),
-        webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/"
-    )
+    print("Bot is polling...")
+    await app.run_polling()
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    import nest_asyncio
+    nest_asyncio.apply()
+    asyncio.get_event_loop().run_until_complete(main())
