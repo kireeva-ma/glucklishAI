@@ -68,6 +68,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("🧑‍💻 Ich bin dein Sprachassistent. Sende mir eine Sprachnachricht, um zu üben!")
 
+def process_voice(file_path: str) -> str:
+    """
+    Given a path to an audio file, transcribe it and generate a GPT reply.
+    Returns the AI's answer as a string.
+    """
+    # transcription
+    # prompt generation
+    # gpt call
+    # return gpt's reply
+
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = (
         "📚 *How to use the bot:*\n\n"
